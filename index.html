@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한수중 다면평가 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --ink:#1c2230; --muted:#5d6676; --line:#d8dce3;
+  --accent:#2a5a8c; --accent-soft:#e4edf7; --warn:#a4421f; --warn-soft:#fbeee8; --hl:#fff4c7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;font-size:15px;line-height:1.55}
+header{background:var(--accent);color:#fff;padding:22px 16px}
+header h1{margin:0;font-size:20px;font-weight:700}
+header p{margin:4px 0 0;opacity:.85;font-size:13px}
+main{max-width:960px;margin:0 auto;padding:18px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card h3{margin:14px 0 6px;font-size:14px;color:var(--accent)}
+.card .sub{margin:0 0 12px;color:var(--muted);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:140px;flex:1}
+.field label{font-size:13px;color:var(--muted);font-weight:500}
+input,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
+input:disabled,select:disabled{background:#eef0f3;color:#555}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.seg{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.seg select{flex:1}
+.seg input{width:90px;flex:none}
+.seg .unit{font-size:13px;color:var(--muted);flex:none}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:#fff;padding:7px 12px;color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;padding:10px 18px}
+button.ghost{color:var(--accent);border-color:var(--accent)}
+button.del{color:var(--warn);border-color:transparent;padding:6px 8px}
+.note{font-size:12.5px;color:var(--muted);margin-top:6px}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0}
+.chk input[type=checkbox]{width:auto}
+.chk input[type=number]{width:70px}
+.status{font-size:13px;margin-top:8px;padding:8px 10px;border-radius:6px}
+.status.ok{background:var(--accent-soft);color:var(--accent)}
+.status.bad{background:var(--warn-soft);color:var(--warn)}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.duty{display:grid;grid-template-columns:1fr 80px 40px;gap:6px 8px;align-items:center;font-size:14px}
+.duty input[type=number]{padding:5px 8px}
+
+#sheet{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px;overflow-x:auto}
+#sheet h3{text-align:center;margin:0 0 4px;font-size:17px}
+.meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px;margin-bottom:8px}
+table.ev{border-collapse:collapse;width:100%;min-width:680px;font-size:12.5px;table-layout:fixed}
+table.ev col.c-area{width:7%} table.ev col.c-ind{width:12%} table.ev col.c-crit{width:32%}
+table.ev col.c-pt{width:6%} table.ev col.c-sc{width:8%} table.ev col.c-basis{width:35%}
+table.ev th,table.ev td{border:1px solid #9aa39f;padding:3px 5px;vertical-align:middle}
+table.ev th{background:#eef1f5;font-weight:700;text-align:center}
+table.ev td.c{text-align:center}
+table.ev tr.hit td.crit,table.ev tr.hit td.pt{background:var(--hl);font-weight:700}
+table.ev td.score{text-align:center;font-weight:700;font-size:14px}
+table.ev td.basis{font-size:12px;color:#222;line-height:1.4}
+table.ev td.basis .rmk{display:block;margin-top:3px;color:#666;font-size:11px}
+.total{display:flex;justify-content:flex-end;gap:14px;align-items:center;margin-top:10px;font-size:15px}
+.total b{font-size:20px}
+.pledge{font-size:12.5px;margin-top:10px}
+.sign{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:13px}
+
+@media print{
+  @page{size:A4 portrait;margin:9mm 9mm 8mm 9mm}
+  html,body{background:#fff;font-size:10px;line-height:1.25}
+  header,.card{display:none!important}
+  main{padding:0;max-width:none;margin:0!important;width:100%!important}
+  #sheet{border:none;padding:0;overflow:visible;border-radius:0;width:100%;margin:0 auto}
+  #sheet h3{font-size:16px;margin:3mm 0 3mm}
+  .meta{font-size:10.5px;margin-bottom:3px}
+  table.ev{min-width:0;width:100%!important;font-size:10px;line-height:1.2;height:228mm}
+  table.ev th{padding:2px;font-size:10px}
+  table.ev td{padding:0 4px}
+  table.ev td.score{font-size:12px}
+  table.ev td.basis{font-size:10px;line-height:1.3;padding:2px 4px;color:#000}
+  table.ev td.basis .rmk{font-size:9px;color:#444}
+  table.ev tr,table.ev td{page-break-inside:avoid;break-inside:avoid}
+  .total{margin-top:4px;font-size:12px}
+  .total b{font-size:15px}
+  .pledge{font-size:10px;margin-top:4px}
+  .sign{font-size:11px;margin-top:6px}
+  table.ev tr.hit td.crit,table.ev tr.hit td.pt{background:#e6e6e6!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>2026학년도 한수중학교 다면평가(성과상여금) 정량평가 계산기</h1>
+  <p>대상 기간 2026. 3. 1. ~ 2027. 2. 28. · 정량평가 기준안에 따라 자동 계산됩니다.</p>
+</header>
+<main>
+
+<section class="card">
+  <h2>1. 기본 정보</h2>
+  <p class="sub">근무 시작일과 종료일을 입력하면 학기별 근무 개월이 자동 계산됩니다(16일 이상 1개월). 1학기 3. 1.~8. 31., 2학기 9. 1.~2. 28.</p>
+  <div class="row">
+    <div class="field"><label for="name">성명</label><input id="name" placeholder="홍길동"></div>
+    <div class="field"><label for="group">교사 구분</label>
+      <select id="group">
+        <option value="general">일반 교사</option>
+        <option value="avg">평균수업 적용 (교무·진로·사서교사)</option>
+        <option value="special">특수학급 교사</option>
+        <option value="counsel">전문상담교사</option>
+        <option value="health">보건교사</option>
+      </select>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div class="field"><label for="start">근무 시작일</label><input type="date" id="start" value="2026-03-01" min="2026-03-01" max="2027-02-28"></div>
+    <div class="field"><label for="end">근무 종료일</label><input type="date" id="end" value="2027-02-28" min="2026-03-01" max="2027-02-28"></div>
+    <div class="field" style="flex:none"><label>근무 개월</label><span class="badge" id="monthsBadge">-</span></div>
+  </div>
+  <p class="note">※ 교무교사는 본인 수업시수가 평균수업 이하일 때만 평균수업을 적용합니다.</p>
+</section>
+
+<section class="card">
+  <h2>2. 가. 학습지도</h2>
+
+  <h3>1) 주당 수업시수 (15점)</h3>
+  <div id="hoursGeneral" class="row">
+    <div class="field"><label for="h1">1학기 주당 수업시수</label><input type="number" id="h1" step="0.01" min="0" max="40"></div>
+    <div class="field"><label for="h2">2학기 주당 수업시수</label><input type="number" id="h2" step="0.01" min="0" max="40"></div>
+  </div>
+  <div id="hoursSpecial" class="row" style="display:none">
+    <div class="field"><label for="sp1">1학기 실 교과수업</label><input type="number" id="sp1" step="0.5" min="0"></div>
+    <div class="field"><label for="si1">1학기 강사수업</label><input type="number" id="si1" step="0.5" min="0" value="0"></div>
+    <div class="field"><label for="sp2">2학기 실 교과수업</label><input type="number" id="sp2" step="0.5" min="0"></div>
+    <div class="field"><label for="si2">2학기 강사수업</label><input type="number" id="si2" step="0.5" min="0" value="0"></div>
+  </div>
+  <div id="hoursCount" class="row" style="display:none">
+    <div class="field"><label for="c1" id="c1l">1학기 실적</label><input type="number" id="c1" step="1" min="0"></div>
+    <div class="field"><label for="c2" id="c2l">2학기 실적</label><input type="number" id="c2" step="1" min="0"></div>
+  </div>
+  <p class="note" id="hoursNote">※ 주당수업시수 = 수업시수 + 스포츠클럽시수 + 동아리시수 · 학기별 점수 × 학기 근무 개월 ÷ 12</p>
+
+  <h3>2) 수업연구 (10점)</h3>
+  <label class="chk"><input type="checkbox" id="extOpen"> 학교대표 외부 공개수업 (0.3점)</label>
+  <label class="chk">수업나눔 <input type="number" id="share" min="0" step="1" value="0"> 회 (회당 0.1점, 상한 0.2점)</label>
+  <label class="chk"><input type="checkbox" id="parentOpen" checked> 학부모공개수업 실시 (실시 9.5점 / 미실시 9.1점)</label>
+  <p class="note">※ 공무로 인한 출장은 수업 실시로 인정 · 전문상담·보건·사서교사는 1학기 1회 이상 학부모 대상 연수로 학부모공개수업을, 교사 대상 연수로 수업나눔을 대신함</p>
+
+  <h3>3) 다학년지도 및 순회교사 (5점)</h3>
+  <div class="row">
+    <div class="field"><label for="g1">1학기 다학년지도</label><select id="g1"><option value="0">3개학년 이상 (3점)</option><option value="1">2개학년 (2.85점)</option><option value="2" selected>1개학년 (2.7점)</option></select></div>
+    <div class="field"><label for="g2">2학기 다학년지도</label><select id="g2"><option value="0">3개학년 이상 (3점)</option><option value="1">2개학년 (2.85점)</option><option value="2" selected>1개학년 (2.7점)</option></select></div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <div class="field"><label for="t1">1학기 순회교사</label><select id="t1"><option value="0">주당 2일 (2점)</option><option value="1">주당 1일 (1.9점)</option><option value="2" selected>해당없음 (1.8점)</option></select></div>
+    <div class="field"><label for="t2">2학기 순회교사</label><select id="t2"><option value="0">주당 2일 (2점)</option><option value="1">주당 1일 (1.9점)</option><option value="2" selected>해당없음 (1.8점)</option></select></div>
+  </div>
+  <p class="note">※ 다학년지도는 평가가 있는 일반 정규교과에 한해 인정 · 스포츠클럽수업·진로(창체)수업 교사는 다학년지도 적용 제외 · 보건·상담교사는 3개학년 인정 · 점수 × 학기 근무 개월 ÷ 12</p>
+</section>
+
+<section class="card">
+  <h2>3. 나. 생활지도</h2>
+  <h3>1) 학생·학부모 상담실적 (20점)</h3>
+  <div class="row">
+    <div class="field"><label for="k1">1학기</label><select id="k1"><option value="0">담임·학년부장·전문상담·진로·학생자치부 교사 (10점)</option><option value="1">상기 외 교사: 20회 이상 (9.95점)</option><option value="2">상기 외 교사: 20회 미만 (9.9점)</option></select></div>
+    <div class="field"><label for="k2">2학기</label><select id="k2"><option value="0">담임·학년부장·전문상담·진로·학생자치부 교사 (10점)</option><option value="1">상기 외 교사: 20회 이상 (9.95점)</option><option value="2">상기 외 교사: 20회 미만 (9.9점)</option></select></div>
+  </div>
+  <p class="note">※ 보건교사는 응급학생·적응상담활동 기록건수 · 상기 외 교사는 상담횟수 기록 및 상담 기록 제출</p>
+
+  <h3>2) 등교맞이 및 교내생활지도 (10점)</h3>
+  <div class="row"><div class="field" style="max-width:240px"><label for="morning">담임교실맞이 및 교내생활지도 개월</label><input type="number" id="morning" min="0" max="12" step="1" value="12"></div></div>
+  <p class="note">※ 1개월 미만 8.8점, 1개월당 0.1점씩 가산 (12개월 10점)</p>
+</section>
+
+<section class="card">
+  <h2>4. 다. 전문성개발</h2>
+  <div class="row">
+    <div class="field"><label for="training">1) 직무연수 이수시수</label><input type="number" id="training" min="0" step="1" placeholder="예: 45"></div>
+    <div class="field"><label for="society">2) 연구회 참여</label><select id="society"><option value="0">참여 (1점)</option><option value="1" selected>비참여 (0.9점)</option></select></div>
+  </div>
+  <p class="note">※ 대상연수: 직무연수(자율 및 자격연수 제외) · 연구회: 도 및 지역교육청 지정연구회</p>
+</section>
+
+<section class="card">
+  <h2>5. 라. 담당업무</h2>
+  <div class="row">
+    <div class="field"><label for="hr">1) 담임 개월</label><input type="number" id="hr" min="0" max="12" step="1" value="0"></div>
+    <div class="field"><label for="post">2) 보직 개월</label><input type="number" id="post" min="0" max="12" step="1" value="0"></div>
+  </div>
+  <p class="note">※ 2개월 미만 8.9점, 2개월부터 1개월당 0.1점씩 가산 (12개월 10점) · 보건·전문상담교사는 담임 인정</p>
+
+  <h3>3) 업무곤란도 (8점)</h3>
+  <p class="sub">기간별 역할과 임명 개월을 입력하세요. 점수 × 임명 개월 ÷ 12로 계산됩니다.</p>
+  <div id="seg-role"></div>
+  <button class="ghost" data-add="role">+ 기간 추가</button>
+  <p class="note" style="margin-top:10px">업무곤란도가 높은 업무 (해당 업무와 임명 개월 입력, 1개당 0.1점 × 개월 ÷ 12, 상한 0.2점)</p>
+  <div class="duty" id="duties"></div>
+
+  <h3>4) 학교발전 기여도 (2점, 기본점수 0.8점)</h3>
+  <label class="chk">① 자율동아리(봉사동아리 포함) 운영 <input type="number" id="club" min="0" max="2" step="1" value="0"> 학기 (학기당 0.05점)</label>
+  <label class="chk">② 교과부장 <input type="number" id="dept" min="0" max="2" step="1" value="0"> 학기 (학기당 0.1점)</label>
+  <label class="chk">③ 각종 위원회 <input type="number" id="comm" min="0" step="1" value="0"> 개 (개당 0.1점, 상한 0.3점)</label>
+  <label class="chk">④ 공모사업 계획서 제출·채택 <input type="number" id="contest" min="0" step="1" value="0"> 회 (회당 0.1점, 상한 0.3점)</label>
+  <label class="chk">⑤ 개인 표창: 교육감상 이상 <input type="number" id="aw1" min="0" step="1" value="0"> 개, 교육장상 <input type="number" id="aw2" min="0" step="1" value="0"> 개 (상한 0.3점)</label>
+  <p class="note">※ 위원회(7개): 학교운영위원, 인사자문위원, 다면평가관리위원, 학교폭력관련위원(1가지 인정), 학업성적관리위원, 위기관리위원회, 상조회 임원 · 표창은 의례적인 할당식 표창 제외</p>
+</section>
+
+<section class="card">
+  <h2>6. 확인 및 제출</h2>
+  <div id="validation"></div>
+  <div class="actions">
+    <button class="primary" id="submitBtn">제출하기</button>
+    <button class="ghost" id="printBtn">평가표 인쇄 / PDF 저장</button>
+    <button id="resetBtn">입력 초기화</button>
+  </div>
+  <div id="submitMsg"></div>
+</section>
+
+<section id="sheet"></section>
+</main>
+
+<script>
+/* ================= 설정 ================= */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4pXxgxvuPQLTTVPYoK3UeA6sDdhRkoC780kvNM3ZVbOy9tMXa_WsLkwx2yDYewcc/exec";
+// 교무(평균 이하일 때)·진로·사서교사 평균수업 (확정되면 숫자로 입력, null이면 직접 입력)
+const AVG_HOURS = null;
+const PERIOD_START="2026-03-01", PERIOD_END="2027-02-28", SEM2_START="2026-09-01";
+
+const DUTIES=["교무기획부장","학생자치부장","학교폭력책임교사","전문상담교사","보건교사","사서교사","사격부감독","통합학급 담임교사","교육실습생 지도교사","전문적학습공동체 대표 교사"];
+const ROLES=[["보직교사",7.8],["담임교사",7.7],["비교과 담임 (상담·보건)",7.6],["비담임",7.5]];
+const HOURS_ROWS=[["22시간 이상",15],["21이상~22미만",14.85],["20이상~21미만",14.7],["19이상~20미만",14.55],["18이상~19미만",14.4],["17이상~18미만",14.25],["16이상~17미만",14.1],["15이상~16미만",13.95],["15시간 미만",13.8]];
+const COUNSEL_ROWS=[[170,15],[150,14.85],[130,14.7],[110,14.55],[90,14.4],[0,14.25]];
+const GRADE=[["3개학년 이상",3],["2개학년",2.85],["1개학년",2.7]];
+const TOUR=[["주당 2일",2],["주당 1일",1.9],["해당없음",1.8]];
+const CONS=[["담임·학년부장·전문상담·진로·학생자치부 교사",10],["상기 외 교사: 20회 이상",9.95],["상기 외 교사: 20회 미만",9.9]];
+const TRAIN=[["60시간 이상",9],["45시간 이상",8.7],["30시간 이상",8.4],["30시간 미만",8.1]];
+
+/* ================= 계산 함수 ================= */
+//<calc>
+function daysBetween(a,b){
+  const d1=Date.UTC(+a.slice(0,4),+a.slice(5,7)-1,+a.slice(8,10));
+  const d2=Date.UTC(+b.slice(0,4),+b.slice(5,7)-1,+b.slice(8,10));
+  return Math.round((d2-d1)/86400000)+1;
+}
+function monthsFromDays(days,cap){ if(days<16) return 0; return Math.min(cap, Math.floor((days-16)/30)+1); }
+function addDays(d,n){ const t=Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))+n*86400000; return new Date(t).toISOString().slice(0,10); }
+// 학기별 근무 개월 (16일 이상 1개월, 학기당 최대 6개월)
+function semMonths(start,end){
+  const s1e=addDays(SEM2_START,-1);
+  const a1=start, b1=end<s1e?end:s1e;
+  const a2=start>SEM2_START?start:SEM2_START, b2=end;
+  const m1= b1>=a1 ? monthsFromDays(daysBetween(a1,b1),6) : 0;
+  const m2= b2>=a2 ? monthsFromDays(daysBetween(a2,b2),6) : 0;
+  return [m1,m2];
+}
+// 민법 제160조 역(曆)에 의한 2개월 만료일
+function twoMonthEnd(start){
+  let y=+start.slice(0,4), m=+start.slice(5,7)-1+2, d=+start.slice(8,10);
+  y+=Math.floor(m/12); m%=12;
+  const last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+  const t = d>last ? Date.UTC(y,m,last) : Date.UTC(y,m,d)-86400000;
+  return new Date(t).toISOString().slice(0,10);
+}
+function hoursIdx(h){ if(h>=22) return 0; if(h<15) return 8; return 22-Math.floor(h); }
+function counselScore(n,isHealth){ const k=isHealth?10:1; for(const [th,pt] of COUNSEL_ROWS){ if(n>=th*k) return pt; } return 14.25; }
+function monthScale(m,minMonths,floorPt){ // 담임·보직: 2개월 미만 8.9, 이후 8.8+0.1m / 등교맞이: 1개월 미만 8.8
+  return m<minMonths ? floorPt : Math.min(10, 8.8+0.1*m);
+}
+function trainIdx(t){ return t>=60?0: t>=45?1: t>=30?2: 3; }
+function r4(x){ return Math.round((x+1e-9)*10000)/10000; }
+//</calc>
+
+/* ================= 화면 ================= */
+const $=id=>document.getElementById(id);
+let roleSegs=[{idx:3,months:12}];
+const dutyState=DUTIES.map(()=>({on:false,months:12}));
+
+function renderRoles(){
+  const box=$("seg-role"); box.innerHTML="";
+  roleSegs.forEach((s,i)=>{
+    const div=document.createElement("div"); div.className="seg";
+    const sel=document.createElement("select");
+    ROLES.forEach((r,ri)=>{ const o=document.createElement("option"); o.value=ri; o.textContent=`${r[0]} (${r[1]}점)`; if(ri===s.idx)o.selected=true; sel.appendChild(o); });
+    sel.onchange=()=>{ s.idx=+sel.value; update(); };
+    const inp=document.createElement("input"); inp.type="number"; inp.min=0; inp.max=12; inp.step=1; inp.value=s.months;
+    inp.oninput=()=>{ s.months=Math.max(0,Math.floor(+inp.value||0)); update(); };
+    const unit=document.createElement("span"); unit.className="unit"; unit.textContent="개월";
+    div.append(sel,inp,unit);
+    if(roleSegs.length>1){ const del=document.createElement("button"); del.className="del"; del.textContent="삭제"; del.onclick=()=>{ roleSegs.splice(i,1); renderRoles(); update(); }; div.append(del); }
+    box.appendChild(div);
+  });
+}
+document.querySelector('[data-add="role"]').onclick=()=>{ roleSegs.push({idx:roleSegs[roleSegs.length-1].idx,months:0}); renderRoles(); update(); };
+
+function renderDuties(){
+  const box=$("duties"); box.innerHTML="";
+  DUTIES.forEach((d,i)=>{
+    const lab=document.createElement("label"); lab.className="chk"; lab.style.margin="0";
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=dutyState[i].on;
+    cb.onchange=()=>{ dutyState[i].on=cb.checked; update(); };
+    lab.append(cb, document.createTextNode(" "+d));
+    const inp=document.createElement("input"); inp.type="number"; inp.min=0; inp.max=12; inp.step=1; inp.value=dutyState[i].months;
+    inp.oninput=()=>{ dutyState[i].months=Math.max(0,Math.floor(+inp.value||0)); update(); };
+    const u=document.createElement("span"); u.className="unit"; u.textContent="개월";
+    box.append(lab,inp,u);
+  });
+}
+
+function fmt(x){ return (Math.round(x*10000)/10000).toString(); }
+function fmtS(x){ if(x===undefined) return "-"; const d=(fmt(x).split(".")[1]||"").length; return (Math.round(x*10000)/10000).toFixed(Math.max(2,d)); }
+function num(id){ const v=$(id).value; return v===""?null:+v; }
+function int(id){ return Math.max(0,Math.floor(+$(id).value||0)); }
+
+function compute(){
+  const E=[]; const S={}; const B={}; const H={};
+  const name=$("name").value.trim(); if(!name) E.push("성명을 입력하세요.");
+  const group=$("group").value;
+  const start=$("start").value, end=$("end").value;
+  let m1=0,m2=0,days=0;
+  if(!start||!end) E.push("근무 시작일과 종료일을 입력하세요.");
+  else if(start<PERIOD_START||end>PERIOD_END) E.push("근무 기간은 2026. 3. 1. ~ 2027. 2. 28. 사이여야 합니다.");
+  else if(end<start) E.push("종료일이 시작일보다 빠릅니다.");
+  else { days=daysBetween(start,end); [m1,m2]=semMonths(start,end);
+    const need=twoMonthEnd(start); if(end<need) E.push(`실근무 기간이 2개월 미만입니다(역(曆)에 의한 2개월 만료일: ${need}). 성과상여금 지급 대상이 아닙니다.`); }
+  const M=m1+m2;
+
+  // 가-1) 주당 수업시수
+  let sem=[null,null], semPt=[null,null], semTxt=["",""];
+  if(group==="counsel"||group==="health"){
+    const isH=group==="health"; const unit=isH?"회":"회기";
+    [num("c1"),num("c2")].forEach((n,i)=>{ const mm=i?m2:m1; if(mm>0&&n===null) E.push(`${i+1}학기 ${isH?"치료":"상담"} 실적을 입력하세요.`); if(n!==null){ semPt[i]=counselScore(n,isH); semTxt[i]=`${i+1}학기 ${n}${unit}→${semPt[i]}`; } });
+  } else {
+    let hs;
+    if(group==="special") hs=[["sp1","si1"],["sp2","si2"]].map(([a,b])=>{ const r=num(a); return r===null?null: r+(num(b)||0)/4; });
+    else if(group==="avg" && AVG_HOURS!==null) hs=[AVG_HOURS,AVG_HOURS];
+    else hs=[num("h1"),num("h2")];
+    hs.forEach((h,i)=>{ const mm=i?m2:m1; if(mm>0&&h===null) E.push(`${i+1}학기 주당 수업시수를 입력하세요.`); if(h!==null){ sem[i]=h; const k=hoursIdx(h); semPt[i]=HOURS_ROWS[k][1]; semTxt[i]=`${i+1}학기 ${fmt(h)}시간→${semPt[i]}`; } });
+    H.hours=[0,1].filter(i=>sem[i]!==null && (i?m2:m1)>0).map(i=>hoursIdx(sem[i]));
+  }
+  S.hours=r4((semPt[0]||0)*m1/12 + (semPt[1]||0)*m2/12);
+  B.hours=[semTxt[0],semTxt[1]].filter(Boolean).join(", ")+` → (${semPt[0]??0}×${m1} + ${semPt[1]??0}×${m2}) ÷ 12`;
+
+  // 가-2) 수업연구
+  const ext=$("extOpen").checked?0.3:0, share=Math.min(0.2,int("share")*0.1), par=$("parentOpen").checked?9.5:9.1;
+  S.research=r4(ext+share+par); H.research=[ext?0:-1, share>0?1:-1, par===9.5?2:3].filter(x=>x>=0);
+  B.research=`학부모공개 ${par} + 외부공개 ${ext} + 수업나눔 ${int("share")}회 ${fmt(share)}`;
+
+  // 가-3) 다학년지도 및 순회
+  let g=[+$("g1").value,+$("g2").value]; if(group==="counsel"||group==="health") g=[0,0];
+  const t=[+$("t1").value,+$("t2").value];
+  const gS=GRADE[g[0]][1]*m1/12+GRADE[g[1]][1]*m2/12, tS=TOUR[t[0]][1]*m1/12+TOUR[t[1]][1]*m2/12;
+  S.multi=r4(gS+tS); H.multi=[...new Set([g[0],g[1]])].concat([...new Set([3+t[0],3+t[1]])]);
+  B.multi=`다학년 (${GRADE[g[0]][1]}×${m1} + ${GRADE[g[1]][1]}×${m2}) ÷ 12 = ${fmt(r4(gS))} / 순회 (${TOUR[t[0]][1]}×${m1} + ${TOUR[t[1]][1]}×${m2}) ÷ 12 = ${fmt(r4(tS))}`;
+
+  // 나-1) 상담실적
+  const k=[+$("k1").value,+$("k2").value];
+  S.cons=r4(CONS[k[0]][1]+CONS[k[1]][1]); H.cons=[...new Set(k)];
+  B.cons=`1학기 ${CONS[k[0]][1]} + 2학기 ${CONS[k[1]][1]}`;
+
+  // 나-2) 등교맞이
+  const mo=int("morning"); if(mo>M && M>0) E.push(`등교맞이 개월(${mo})이 근무 개월(${M})보다 많습니다.`);
+  S.morning=r4(monthScale(mo,1,8.8)); H.morning=[0]; B.morning=`${mo}개월 → ${mo<1?"1개월 미만 8.8":`8.8 + 0.1×${mo}`}`;
+
+  // 다-1) 연수, 2) 연구회
+  const tr=num("training"); if(tr===null) E.push("직무연수 이수시수를 입력하세요.");
+  const ti=trainIdx(tr||0); S.training=TRAIN[ti][1]; H.training=[ti]; B.training=`${tr??0}시간`;
+  const so=+$("society").value; S.society=so?0.9:1; H.society=[so]; B.society=so?"비참여":"참여";
+
+  // 라-1) 담임, 2) 보직
+  const hr=int("hr"), po=int("post");
+  if(hr>M && M>0) E.push(`담임 개월(${hr})이 근무 개월(${M})보다 많습니다.`);
+  if(po>M && M>0) E.push(`보직 개월(${po})이 근무 개월(${M})보다 많습니다.`);
+  S.homeroom=r4(monthScale(hr,2,8.9)); H.homeroom=[0]; B.homeroom=`${hr}개월 → ${hr<2?"2개월 미만 8.9":`8.8 + 0.1×${hr}`}`;
+  S.post=r4(monthScale(po,2,8.9)); H.post=[0]; B.post=`${po}개월 → ${po<2?"2개월 미만 8.9":`8.8 + 0.1×${po}`}`;
+
+  // 라-3) 업무곤란도
+  const segs=roleSegs.filter(s=>s.months>0); const rsum=segs.reduce((a,s)=>a+s.months,0);
+  if(M>0 && rsum>M) E.push(`업무곤란도 임명 개월 합계(${rsum})가 근무 개월(${M})보다 많습니다.`);
+  const base=segs.reduce((a,s)=>a+ROLES[s.idx][1]*s.months/12,0);
+  const ds=dutyState.map((d,i)=>({...d,name:DUTIES[i]})).filter(d=>d.on&&d.months>0);
+  ds.forEach(d=>{ if(M>0 && d.months>M) E.push(`${d.name} 임명 개월(${d.months})이 근무 개월(${M})보다 많습니다.`); });
+  const addRaw=ds.reduce((a,d)=>a+0.1*d.months/12,0), add=Math.min(0.2,addRaw);
+  S.difficulty=r4(Math.min(8,base+add)); H.difficulty=[...new Set(segs.map(s=>s.idx))].concat(ds.length?[4]:[]);
+  B.difficulty=`(${segs.map(s=>`${ROLES[s.idx][1]}×${s.months}`).join(" + ")||"0"}) ÷ 12 = ${fmt(r4(base))}` + (ds.length?` / 부가 ${ds.map(d=>`${d.name} 0.1×${d.months}÷12`).join(", ")} = ${fmt(r4(add))}${addRaw>0.2?"(상한)":""}`:"");
+
+  // 라-4) 학교발전 기여도
+  const club=Math.min(2,int("club")), dept=Math.min(2,int("dept"));
+  const parts=[Math.min(0.1,club*0.05), Math.min(0.2,dept*0.1), Math.min(0.3,int("comm")*0.1), Math.min(0.3,int("contest")*0.1), Math.min(0.3,int("aw1")*0.2+int("aw2")*0.1)];
+  S.contrib=r4(0.8+parts.reduce((a,b)=>a+b,0)); H.contrib=[0].concat(parts.map((p,i)=>p>0?i+1:-1).filter(x=>x>0));
+  B.contrib=`기본 0.8 + 동아리 ${fmt(parts[0])} + 교과부장 ${fmt(parts[1])} + 위원회 ${fmt(parts[2])} + 공모 ${fmt(parts[3])} + 표창 ${fmt(parts[4])}`;
+
+  const total=r4(Object.values(S).reduce((a,b)=>a+b,0));
+  return {name,group,start,end,days,m1,m2,S,B,H,total,errors:E};
+}
+
+/* 평가표 */
+const SHEET=[
+ {area:"가.<br>학습<br>지도<br>(30점)", items:[
+   {k:"hours",name:"1) 주당<br>수업시수<br>(15점)",rows:HOURS_ROWS.map(r=>[r[0],r[1]]),rmk:"학기별 점수 × 학기 근무 개월 ÷ 12 · 교무(평균 이하)·진로·사서: 평균수업 · 특수: 강사수업 4시간당 1시간 · 상담(회기)/보건(회): 학기별 실적"},
+   {k:"research",name:"2) 수업연구<br>(10점)",rows:[["학교대표 외부 공개수업",0.3],["수업나눔 (회당 0.1)",0.2],["학부모공개수업 실시",9.5],["학부모공개수업 미실시",9.1]]},
+   {k:"multi",name:"3) 다학년지도<br>및 순회교사<br>(5점)",rows:[["다학년지도: 3개학년 이상",3],["다학년지도: 2개학년",2.85],["다학년지도: 1개학년",2.7],["순회교사: 주당 2일",2],["순회교사: 주당 1일",1.9],["순회교사: 해당없음",1.8]],rmk:"점수 × 지도 개월 ÷ 12"}]},
+ {area:"나.<br>생활<br>지도<br>(30점)", items:[
+   {k:"cons",name:"1) 학생·학부모<br>상담실적<br>(20점)",rows:CONS.map(r=>[r[0]+" (학기별)",r[1]])},
+   {k:"morning",name:"2) 등교맞이 및<br>교내생활지도<br>(10점)",rows:[["12개월 10점, 1개월당 0.1점 (1개월 미만 8.8)","8.8~10"]]}]},
+ {area:"다.<br>전문성<br>개발<br>(10점)", items:[
+   {k:"training",name:"1) 직무연수<br>이수(9점)",rows:TRAIN},
+   {k:"society",name:"2) 연구회<br>참여(1점)",rows:[["참여",1],["비참여",0.9]]}]},
+ {area:"라.<br>담당<br>업무<br>(30점)", items:[
+   {k:"homeroom",name:"1) 담임<br>(10점)",rows:[["12개월 10점, 1개월당 0.1점 (2개월 미만 8.9)","8.9~10"]]},
+   {k:"post",name:"2) 보직<br>(10점)",rows:[["12개월 10점, 1개월당 0.1점 (2개월 미만 8.9)","8.9~10"]]},
+   {k:"difficulty",name:"3) 업무곤란도<br>(8점)",rows:ROLES.map(r=>[r[0],r[1]]).concat([["업무곤란도 높은 업무 (개당 0.1 × 개월 ÷ 12)","+0.2"]]),rmk:"점수 × 임명 개월 ÷ 12"},
+   {k:"contrib",name:"4) 학교발전<br>기여도<br>(2점)",rows:[["기본점수",0.8],["자율동아리 운영 (학기당 0.05)",0.1],["교과부장 (학기당 0.1)",0.2],["각종 위원회 (개당 0.1)",0.3],["공모사업 제출·채택 (회당 0.1)",0.3],["개인 표창 (교육감 0.2 / 교육장 0.1)",0.3]]}]}
+];
+function renderSheet(r){
+  let h=`<h3>2026학년도 한수중학교 다면평가(성과상여금) 정량평가표</h3>
+  <div class="meta"><span>대상 기간: 2026. 3. 1. ~ 2027. 2. 28.</span><span>근무기간: ${r.start||"-"} ~ ${r.end||"-"} (1학기 ${r.m1}개월, 2학기 ${r.m2}개월)</span></div>
+  <table class="ev"><colgroup><col class="c-area"><col class="c-ind"><col class="c-crit"><col class="c-pt"><col class="c-sc"><col class="c-basis"></colgroup>
+  <thead><tr><th>평가<br>요소</th><th>평가지표<br>(만점)</th><th>세부기준</th><th>기준<br>점수</th><th>산출<br>점수</th><th>산출 근거</th></tr></thead><tbody>`;
+  for(const a of SHEET){
+    const span=a.items.reduce((s,it)=>s+it.rows.length,0); let first=true;
+    for(const it of a.items){
+      const hit=r.H[it.k]||[];
+      it.rows.forEach((row,i)=>{
+        h+=`<tr class="${hit.includes(i)?"hit":""}">`;
+        if(first){ h+=`<td class="c" rowspan="${span}">${a.area}</td>`; first=false; }
+        if(i===0) h+=`<td class="c" rowspan="${it.rows.length}">${it.name}</td>`;
+        h+=`<td class="crit">${row[0]}</td><td class="c pt">${row[1]}</td>`;
+        if(i===0) h+=`<td class="score" rowspan="${it.rows.length}">${fmtS(r.S[it.k])}</td><td class="basis" rowspan="${it.rows.length}">${r.B[it.k]||""}${it.rmk?`<span class="rmk">※ ${it.rmk}</span>`:""}</td>`;
+        h+=`</tr>`;
+      });
+    }
+  }
+  h+=`</tbody></table>
+  <div class="total"><span>총점 (100점)</span><b>${r.errors.length?"-":fmtS(r.total)}</b></div>
+  <p class="pledge">위의 내용은 직접 작성하였으며, 미기재 및 오기로 인한 모든 불이익은 본인이 책임지고 감수하며, 해당 내용에 대해 허위가 없음을 서약합니다. &nbsp; 2026. 11. &nbsp;&nbsp;&nbsp;.</p>
+  <div class="sign"><span>1차 확인: ____________ (서명)</span><span>2차 확인: ____________ (서명)</span><span>한수중학교 교사 &nbsp;성명: <b>${r.name||"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"}</b> (인)</span></div>`;
+  $("sheet").innerHTML=h;
+}
+
+function update(){
+  const g=$("group").value;
+  $("hoursGeneral").style.display=(g==="general"||g==="avg")?"":"none";
+  $("hoursSpecial").style.display=g==="special"?"":"none";
+  $("hoursCount").style.display=(g==="counsel"||g==="health")?"":"none";
+  const lockAvg = g==="avg" && AVG_HOURS!==null;
+  ["h1","h2"].forEach(id=>{ $(id).disabled=lockAvg; if(lockAvg) $(id).value=AVG_HOURS; });
+  $("c1l").textContent=g==="health"?"1학기 치료 실적(회)":"1학기 상담 실적(회기)";
+  $("c2l").textContent=g==="health"?"2학기 치료 실적(회)":"2학기 상담 실적(회기)";
+  $("hoursNote").textContent = g==="counsel"||g==="health"
+    ? (g==="health"?"※ 보건: 학기별 1700회 이상 15점, 1500회 14.85, 1300회 14.7, 1100회 14.55, 900회 14.4, 900회 미만 14.25 (각 학기 점수 × 학기 근무 개월 ÷ 12) · 나이스 업무통계 출력자료 제출":"※ 전문상담: 학기별 170회기 이상 15점, 150회기 14.85, 130회기 14.7, 110회기 14.55, 90회기 14.4, 90회기 미만 14.25 (각 학기 점수 × 학기 근무 개월 ÷ 12) · 나이스 업무통계 출력자료 제출")
+    : g==="special" ? "※ 특수학급: 주당 실 교과수업 + 강사수업(4시간당 1시간 인정) · 학기별 점수 × 학기 근무 개월 ÷ 12"
+    : g==="avg" ? (AVG_HOURS===null?"※ 평균수업 시수를 입력하세요 (교무교사는 본인 시수가 평균 이하일 때만)":`※ 평균수업 ${AVG_HOURS}시간 자동 적용`)
+    : "※ 주당수업시수 = 수업시수 + 스포츠클럽시수 + 동아리시수 · 학기별 점수 × 학기 근무 개월 ÷ 12";
+  ["g1","g2"].forEach(id=>{ const lock=g==="counsel"||g==="health"; $(id).disabled=lock; if(lock) $(id).value="0"; });
+  const r=compute();
+  $("monthsBadge").textContent=r.days?`1학기 ${r.m1} · 2학기 ${r.m2}개월`:"-";
+  $("validation").innerHTML=r.errors.length?`<div class="status bad">${r.errors.map(e=>"• "+e).join("<br>")}</div>`:`<div class="status ok">입력이 완료되었습니다. 총점 ${fmtS(r.total)}점</div>`;
+  renderSheet(r); saveDraft(); return r;
+}
+
+/* 임시 저장 */
+const DRAFT_KEY="hansu-dagmyeon-2026";
+const FIELDS=["name","group","start","end","h1","h2","sp1","si1","sp2","si2","c1","c2","share","g1","g2","t1","t2","k1","k2","morning","training","society","hr","post","club","dept","comm","contest","aw1","aw2"];
+const CHECKS=["extOpen","parentOpen"];
+function saveDraft(){ try{ const d={roleSegs,dutyState}; FIELDS.forEach(f=>d[f]=$(f).value); CHECKS.forEach(f=>d[f]=$(f).checked); localStorage.setItem(DRAFT_KEY,JSON.stringify(d)); }catch(e){} }
+function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null"); if(!d)return; FIELDS.forEach(f=>{ if(typeof d[f]==="string") $(f).value=d[f]; }); CHECKS.forEach(f=>{ if(typeof d[f]==="boolean") $(f).checked=d[f]; }); if(Array.isArray(d.roleSegs)&&d.roleSegs.length) roleSegs=d.roleSegs; if(Array.isArray(d.dutyState)) d.dutyState.forEach((x,i)=>{ if(dutyState[i]) Object.assign(dutyState[i],x); }); }catch(e){} }
+
+document.querySelectorAll("input,select").forEach(el=>{ el.addEventListener("input",update); el.addEventListener("change",update); });
+$("resetBtn").onclick=()=>{ if(!confirm("입력한 내용을 모두 지우고 처음 상태로 되돌릴까요?\n(이미 제출한 내용은 시트에 그대로 남습니다)"))return; try{localStorage.removeItem(DRAFT_KEY);}catch(e){} location.reload(); };
+$("printBtn").onclick=()=>{ update(); window.print(); };
+const KEYS=["hours","research","multi","cons","morning","training","society","homeroom","post","difficulty","contrib"];
+const GLABEL={general:"일반",avg:"평균수업",special:"특수학급",counsel:"전문상담",health:"보건"};
+$("submitBtn").onclick=async()=>{
+  const r=update(); const msg=$("submitMsg");
+  if(r.errors.length){ msg.innerHTML=`<div class="status bad">입력 오류를 먼저 해결하세요.</div>`; return; }
+  if(!SCRIPT_URL){ msg.innerHTML=`<div class="status bad">제출 주소가 설정되지 않았습니다. 관리자에게 문의하세요.</div>`; return; }
+  if(!confirm(`${r.name} 선생님, 총점 ${fmtS(r.total)}점으로 제출합니다.\n같은 이름으로 다시 제출하면 기존 제출 내용이 덮어쓰기 됩니다.`)) return;
+  const payload={name:r.name,group:GLABEL[r.group],start:r.start,end:r.end,m1:r.m1,m2:r.m2,scores:r.S,total:r.total,basis:r.B};
+  $("submitBtn").disabled=true; msg.innerHTML=`<div class="status ok">제출 중…</div>`;
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    const j=await resp.json();
+    if(j.ok) msg.innerHTML=`<div class="status ok">제출되었습니다 (${j.mode==="updated"?"기존 제출 수정":"신규 제출"}). 평가표를 인쇄하여 서명 후 증빙자료와 함께 제출해 주세요.</div>`;
+    else throw new Error(j.error||"알 수 없는 오류");
+  }catch(e){ msg.innerHTML=`<div class="status bad">제출 실패: ${e.message}</div>`; }
+  $("submitBtn").disabled=false;
+};
+
+loadDraft(); renderRoles(); renderDuties(); update();
+</script>
+</body>
+</html>
